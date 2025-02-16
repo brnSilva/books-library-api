@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -63,13 +66,31 @@ public class InsightService {
             ResponseEntity<Map> response = restTemplate.postForEntity(externalAIUrl, entity, Map.class);
 
             if(response.getStatusCode() == HttpStatus.OK) {
-                Map<String, Object> insights = response.getBody();
+
+                Map<String, Object> insights = new HashMap<>();
+                //Map<String, Object> insights = response.getBody();
                 insights.put("book", bookEntity);
+                insights.put("insight", recoverInsight(response.getBody()));
                 return insights;
             }
             
             throw new RuntimeException("Failed AI insights. Please, try again.");
+        } catch (HttpClientErrorException e) {
+            
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                throw new RuntimeException("Unauthorized access. Please check your API key.", e);
+            } else if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
+                throw new RuntimeException("Forbidden access. You might not have permission to access this resource.", e);
+            } else if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new RuntimeException("Resource not found. Please check the URL.", e);
+            } else {
+                throw new RuntimeException("Client error: " + e.getMessage(), e);
+            }
+        } catch (HttpServerErrorException e) {
+
+            throw new RuntimeException("Server error: " + e.getMessage(), e);
         } catch (Exception e) {
+
             throw new RuntimeException("Error while calling AI Service.", e);
         }
         
@@ -79,6 +100,23 @@ public class InsightService {
         return String.format(prompt, bookEntity.getTitle(), 
                                     bookEntity.getAuthor(),
                                     bookEntity.getDescription());
+    }
+
+    private String recoverInsight(Map responseBody) throws Exception {
+        
+        if(responseBody != null && responseBody.containsKey("choices")){
+            
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
+
+
+            Optional<String> text = choices.stream()
+                                            .filter(choice -> choice.containsKey("message"))
+                                            .map(choice -> (Map<String, Object>) choice.get("message"))
+                                            .map(message -> (String) message.get("content"))
+                                            .findFirst();
+            return text.get();
+        }
+        throw new RuntimeException("No text found in the OpenAI response.");
     }
     
 }
