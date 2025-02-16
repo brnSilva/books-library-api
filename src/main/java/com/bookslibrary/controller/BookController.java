@@ -1,6 +1,7 @@
 package com.bookslibrary.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bookslibrary.entity.BookEntity;
 import com.bookslibrary.repository.BookRepository;
+import com.bookslibrary.service.BookService;
+import com.bookslibrary.service.InsightService;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 
 
@@ -26,6 +31,12 @@ public class BookController {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private BookService bookService;
+
+    @Autowired
+    private InsightService insightService;
 
     @PostMapping
     public BookEntity create(@RequestBody BookEntity book) {
@@ -40,7 +51,8 @@ public class BookController {
     @GetMapping("/{id}")
     public ResponseEntity<BookEntity> getById(@PathVariable Long id) {
         Optional<BookEntity> book = bookRepository.findById(id);
-        return book.map(bookFounded -> new ResponseEntity<>(bookFounded, HttpStatus.OK) ).orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        return book.map(bookFounded -> new ResponseEntity<>(bookFounded, HttpStatus.OK))
+                    .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
     
     @PutMapping("/{id}")
@@ -54,25 +66,38 @@ public class BookController {
             book.setPublicationYear(bookUpdated.getPublicationYear());
             book.setDescription(bookUpdated.getDescription());
             return new ResponseEntity<>(bookRepository.save(book), HttpStatus.OK) ;
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        
+
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (bookRepository.existsById(id)) {
             bookRepository.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(HttpStatus.OK);
         }
+
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @GetMapping("/")
-    public String home() {
-        return "Welcome to Helena's Books Library!";
+    @GetMapping("/filterBy")   
+    public ResponseEntity<List<BookEntity>> filterBy(@RequestParam(required = false) String title,
+                                                    @RequestParam(required = false) String author) {
+        List<BookEntity> books = bookService.filterBooksBy(title, author);
+
+        if(!books.isEmpty())
+            return new ResponseEntity<>(books, HttpStatus.OK);
+        
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping("/{id}/ai-insights")
+    public ResponseEntity<Map<String, Object>> getBookInsights(@PathVariable Long id) {
+
+        Map<String, Object> insights = insightService.getBookInsights(id);
+        
+        return ResponseEntity.ok(insights);
     }
     
 }

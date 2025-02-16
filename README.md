@@ -1,0 +1,2 @@
+# books-library-api
+A API in Restful with Spring Boot that allows you to manage a library of books. Providing functionalities to create, read, update and delete books, as well as retrieve detailed information about each stored book.
