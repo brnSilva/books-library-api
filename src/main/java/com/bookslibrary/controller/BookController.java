@@ -1,7 +1,6 @@
 package com.bookslibrary.controller;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +15,8 @@ import com.bookslibrary.entity.BookEntity;
 import com.bookslibrary.repository.BookRepository;
 import com.bookslibrary.service.BookService;
 import com.bookslibrary.service.InsightService;
+
+import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,7 +40,7 @@ public class BookController {
     private InsightService insightService;
 
     @PostMapping
-    public BookEntity create(@RequestBody BookEntity book) {
+    public BookEntity create(@Valid @RequestBody BookEntity book) {
         return bookRepository.save(book);
     }
 
@@ -56,7 +57,7 @@ public class BookController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<BookEntity> update(@PathVariable Long id, @RequestBody BookEntity bookUpdated) {
+    public ResponseEntity<BookEntity> update(@Valid @PathVariable Long id, @RequestBody BookEntity bookUpdated) {
         Optional<BookEntity> bookToUpdate = bookRepository.findById(id);
         if(bookToUpdate.isPresent()){
             BookEntity book = bookToUpdate.get();
@@ -93,11 +94,9 @@ public class BookController {
     }
 
     @GetMapping("/{id}/ai-insights")
-    public ResponseEntity<Map<String, Object>> getBookInsights(@PathVariable Long id) {
-
-        Map<String, Object> insights = insightService.getBookInsights(id);
+    public ResponseEntity<BookEntity> getBookInsights(@PathVariable Long id) {
         
-        return ResponseEntity.ok(insights);
+        return new ResponseEntity<>(insightService.getBookInsights(id), HttpStatus.OK);
     }
     
 }

@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import com.bookslibrary.entity.BookEntity;
+import com.bookslibrary.exception.ApiIntegrationAIException;
 import com.bookslibrary.exception.ResouceNotFoundException;
 import com.bookslibrary.repository.BookRepository;
 
@@ -41,7 +42,7 @@ public class InsightService {
     private String prompt;
 
 
-    public Map<String, Object> getBookInsights(Long id) {
+    public BookEntity getBookInsights(Long id) {
 
         BookEntity bookEntity = bookRepository.findById(id)
                                     .orElseThrow(() -> new ResouceNotFoundException("Book not found"));
@@ -66,32 +67,29 @@ public class InsightService {
             ResponseEntity<Map> response = restTemplate.postForEntity(externalAIUrl, entity, Map.class);
 
             if(response.getStatusCode() == HttpStatus.OK) {
-
-                Map<String, Object> insights = new HashMap<>();
-                //Map<String, Object> insights = response.getBody();
-                insights.put("book", bookEntity);
-                insights.put("insight", recoverInsight(response.getBody()));
-                return insights;
+                
+                bookEntity.setDescription(recoverInsight(response.getBody()));
+                return bookEntity;
             }
             
-            throw new RuntimeException("Failed AI insights. Please, try again.");
+            throw new ApiIntegrationAIException("Failed AI insights. Please, try again.");
         } catch (HttpClientErrorException e) {
             
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-                throw new RuntimeException("Unauthorized access. Please check your API key.", e);
+                throw new ApiIntegrationAIException("Unauthorized access. Please check your API key.");
             } else if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-                throw new RuntimeException("Forbidden access. You might not have permission to access this resource.", e);
+                throw new ApiIntegrationAIException("Forbidden access. You might not have permission to access this resource.");
             } else if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                throw new RuntimeException("Resource not found. Please check the URL.", e);
+                throw new ApiIntegrationAIException("Resource not found. Please check the URL.");
             } else {
-                throw new RuntimeException("Client error: " + e.getMessage(), e);
+                throw new ApiIntegrationAIException("Client error: " + e.getMessage());
             }
         } catch (HttpServerErrorException e) {
 
-            throw new RuntimeException("Server error: " + e.getMessage(), e);
+            throw new ApiIntegrationAIException("Server error: " + e.getMessage());
         } catch (Exception e) {
 
-            throw new RuntimeException("Error while calling AI Service.", e);
+            throw new ApiIntegrationAIException("Error while calling AI Service.");
         }
         
     }
@@ -116,7 +114,7 @@ public class InsightService {
                                             .findFirst();
             return text.get();
         }
-        throw new RuntimeException("No text found in the OpenAI response.");
+        throw new ApiIntegrationAIException("No text found in the OpenAI response.");
     }
     
 }
