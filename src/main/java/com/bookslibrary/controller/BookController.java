@@ -44,8 +44,9 @@ public class BookController {
     private InsightService insightService;
 
     @PostMapping
-    public BookEntity create(@Valid @RequestBody BookEntity book) {
-        return bookRepository.save(book);
+    public ResponseEntity<BookEntity> create(@Valid @RequestBody BookEntity book) {
+        
+        return new ResponseEntity<>(bookRepository.save(book), HttpStatus.CREATED) ;
     }
 
     @GetMapping
@@ -69,7 +70,8 @@ public class BookController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<BookEntity> update(@Valid @PathVariable Long id, @RequestBody BookEntity bookUpdated) {
+    public ResponseEntity<BookEntity> update(@Valid @PathVariable Long id, @RequestBody BookEntity bookUpdated){
+
         Optional<BookEntity> bookToUpdate = bookRepository.findById(id);
         if(bookToUpdate.isPresent()){
             BookEntity book = bookToUpdate.get();
@@ -77,10 +79,9 @@ public class BookController {
             book.setAuthor(bookUpdated.getAuthor());
             book.setIsbn(bookUpdated.getIsbn());
             book.setPublicationYear(bookUpdated.getPublicationYear());
-            book.setDescription(bookUpdated.getDescription());
+            
             return new ResponseEntity<>(bookRepository.save(book), HttpStatus.OK) ;
         }
-
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 

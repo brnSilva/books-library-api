@@ -96,8 +96,7 @@ public class InsightService {
 
     private String buildPrompt(BookEntity bookEntity) {
         return String.format(prompt, bookEntity.getTitle(), 
-                                    bookEntity.getAuthor(),
-                                    bookEntity.getDescription());
+                                    bookEntity.getAuthor());
     }
 
     private String recoverInsight(Map responseBody) throws Exception {
