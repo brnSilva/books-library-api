@@ -1,5 +1,6 @@
 package com.bookslibrary.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,6 +27,7 @@ public class BookEntity {
 	@Pattern(regexp = "^[0-9]{4}$", message = "Publication Year should be a 4-digit number (e.g., 1993).")
     private String publicationYear;
 
+	@Column(length = 1000)
     private String description;
 
 	public Long getId() {

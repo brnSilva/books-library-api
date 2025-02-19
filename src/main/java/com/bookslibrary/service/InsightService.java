@@ -25,7 +25,7 @@ import com.bookslibrary.repository.BookRepository;
 
 @Service
 public class InsightService {
-    
+
     @Autowired
     private BookRepository bookRepository;
 
@@ -38,11 +38,17 @@ public class InsightService {
     @Value("${external.ai.api.key}")
     private String externalApiKey;
 
+    @Value("${external.ai.api.model}")
+    private String externalApiModel;
+
+    @Value("${external.ai.api.role}")
+    private String externalApiRole;
+
     @Value("${external.ai.api.prompt}")
     private String prompt;
 
 
-    public BookEntity getBookInsights(Long id) {
+    public BookEntity getBookInsights(Long id){
 
         BookEntity bookEntity = bookRepository.findById(id)
                                     .orElseThrow(() -> new ResouceNotFoundException("Book not found"));
@@ -52,29 +58,29 @@ public class InsightService {
         headers.set("Authorization", "Bearer "+ externalApiKey);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("model", "gpt-4o-mini");
+        request.put("model", externalApiModel);
 
         List<Map<String,String>> messages = new ArrayList<>();
         Map<String, String> messageContent = new HashMap<>();
-        messageContent.put("role", "developer");
+        messageContent.put("role", externalApiRole);
         messageContent.put("content", buildPrompt(bookEntity));
         messages.add(messageContent);
         request.put("messages", messages);
-        
+
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
         try{
             ResponseEntity<Map> response = restTemplate.postForEntity(externalAIUrl, entity, Map.class);
 
-            if(response.getStatusCode() == HttpStatus.OK) {
-                
+            if(response.getStatusCode() == HttpStatus.OK){
+
                 bookEntity.setDescription(recoverInsight(response.getBody()));
                 return bookEntity;
             }
-            
+
             throw new ApiIntegrationAIException("Failed AI insights. Please, try again.");
-        } catch (HttpClientErrorException e) {
-            
+        } catch (HttpClientErrorException e){
+
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
                 throw new ApiIntegrationAIException("Unauthorized access. Please check your API key.");
             } else if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
@@ -84,25 +90,26 @@ public class InsightService {
             } else {
                 throw new ApiIntegrationAIException("Client error: " + e.getMessage());
             }
-        } catch (HttpServerErrorException e) {
+        } catch (HttpServerErrorException e){
 
             throw new ApiIntegrationAIException("Server error: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (Exception e){
 
             throw new ApiIntegrationAIException("Error while calling AI Service.");
         }
-        
+
     }
 
-    private String buildPrompt(BookEntity bookEntity) {
+    private String buildPrompt(BookEntity bookEntity){
+
         return String.format(prompt, bookEntity.getTitle(), 
                                     bookEntity.getAuthor());
     }
 
-    private String recoverInsight(Map responseBody) throws Exception {
-        
+    private String recoverInsight(Map responseBody) throws Exception{
+
         if(responseBody != null && responseBody.containsKey("choices")){
-            
+
             List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
 
 
@@ -115,5 +122,5 @@ public class InsightService {
         }
         throw new ApiIntegrationAIException("No text found in the OpenAI response.");
     }
-    
 }
+
