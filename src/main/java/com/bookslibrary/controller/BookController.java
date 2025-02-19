@@ -1,6 +1,5 @@
 package com.bookslibrary.controller;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,10 +27,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 
-
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/books")
+@Tag(name = "Book Management", description = "Books Library System Controller")
 public class BookController {
 
     @Autowired
@@ -44,50 +49,58 @@ public class BookController {
     private InsightService insightService;
 
     @PostMapping
-    public ResponseEntity<BookEntity> create(@Valid @RequestBody BookEntity book) {
-        
+    @Operation(summary = "Save a new book in the library", description = "Create a new book with mandatory fields using a json structure")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully created the book",
+                                            content = @Content(mediaType = "application/json", 
+                                             schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
+    })
+    public ResponseEntity<BookEntity> create(@Valid @RequestBody BookEntity book){
+
         return new ResponseEntity<>(bookRepository.save(book), HttpStatus.CREATED) ;
     }
 
     @GetMapping
-    public ResponseEntity<Page<BookEntity>> getAll(
+    @Operation(summary = "Get a list of all books with page, size list and sort.")
+    public ResponseEntity<Page<BookEntity>> listPageable(
                                 @RequestParam(defaultValue = "0") int page,
                                 @RequestParam(defaultValue = "10") int size,
-                                @RequestParam(defaultValue = "title,asc") String[] sort){
-        
+                                @RequestParam(defaultValue = "title,asc") String[] sort,
+                                @RequestParam(required = false) String query){
+
+
         Sort.Direction direction = Sort.Direction.fromString(sort[1]);
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort[0]));
 
-        Page<BookEntity> booksPage = bookRepository.findAll(pageable);
+        Page<BookEntity> booksPage = bookService.findPageable(query, pageable);
+
         return new ResponseEntity<>(booksPage, HttpStatus.OK);
     }
-    
+
     @GetMapping("/{id}")
-    public ResponseEntity<BookEntity> getById(@PathVariable Long id) {
+    @Operation(summary = "Get a book by Id")
+    public ResponseEntity<BookEntity> getById(@PathVariable Long id){
+
         Optional<BookEntity> book = bookRepository.findById(id);
+
         return book.map(bookFounded -> new ResponseEntity<>(bookFounded, HttpStatus.OK))
                     .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<BookEntity> update(@Valid @PathVariable Long id, @RequestBody BookEntity bookUpdated){
 
-        Optional<BookEntity> bookToUpdate = bookRepository.findById(id);
-        if(bookToUpdate.isPresent()){
-            BookEntity book = bookToUpdate.get();
-            book.setTitle(bookUpdated.getTitle());
-            book.setAuthor(bookUpdated.getAuthor());
-            book.setIsbn(bookUpdated.getIsbn());
-            book.setPublicationYear(bookUpdated.getPublicationYear());
-            
-            return new ResponseEntity<>(bookRepository.save(book), HttpStatus.OK) ;
-        }
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    @PutMapping("/{id}")
+    @Operation(summary = "Update an existing book by Id")
+    public ResponseEntity<BookEntity> update(@PathVariable Long id, @Valid @RequestBody BookEntity bookUpdated){
+
+        return new ResponseEntity<>(bookService.updateBook(id, bookUpdated), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (bookRepository.existsById(id)) {
+    @Operation(summary = "Delete a book by Id")
+    public ResponseEntity<Void> delete(@PathVariable Long id){
+
+        if (bookRepository.existsById(id)){
+
             bookRepository.deleteById(id);
             return new ResponseEntity<>(HttpStatus.OK);
         }
@@ -95,21 +108,14 @@ public class BookController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @GetMapping("/filterBy")   
-    public ResponseEntity<List<BookEntity>> filterBy(@RequestParam(required = false) String title,
-                                                    @RequestParam(required = false) String author) {
-        List<BookEntity> books = bookService.filterBooksBy(title, author);
-
-        if(!books.isEmpty())
-            return new ResponseEntity<>(books, HttpStatus.OK);
-        
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
-
     @GetMapping("/{id}/ai-insights")
-    public ResponseEntity<BookEntity> getBookInsights(@PathVariable Long id) {
-        
-        return new ResponseEntity<>(insightService.getBookInsights(id), HttpStatus.OK);
+    @Operation(summary = "Get an AI summary for a specific book by Id")
+    public ResponseEntity<BookEntity> getBookInsights(@PathVariable Long id){
+
+        BookEntity bookEntity = insightService.getBookInsights(id);
+
+        bookService.updateBook(id, bookEntity);
+        return new ResponseEntity<>(bookEntity, HttpStatus.OK);
     }
-    
+
 }
