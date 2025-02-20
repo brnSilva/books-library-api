@@ -36,7 +36,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/books")
-@Tag(name = "Book Management", description = "Books Library System Controller")
+@Tag(name = "Books Library Management", description = "Books Library System Controller")
 public class BookController {
 
     @Autowired
@@ -49,11 +49,12 @@ public class BookController {
     private InsightService insightService;
 
     @PostMapping
-    @Operation(summary = "Save a new book in the library", description = "Create a new book with mandatory fields using a json structure")
+    @Operation(summary = "Save a new book in the library.", description = "A POST Mapping to create a new book with mandatory fields using a json structure.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully created the book",
-                                            content = @Content(mediaType = "application/json", 
-                                             schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "201", description = "Successfully created the book",
+                                            content = @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "400", description = "Bad Request for empty, null or without mandatory fields"),
         @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
     })
     public ResponseEntity<BookEntity> create(@Valid @RequestBody BookEntity book){
@@ -62,13 +63,19 @@ public class BookController {
     }
 
     @GetMapping
-    @Operation(summary = "Get a list of all books with page, size list and sort.")
+    @Operation(summary = "Get a list of all books by filter.", description = "A GET Mapping to list books by All, Author or Title and pageable with params page number, list size and sort to ASC or DESC.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully pageable list of books",
+                                            content = @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "400", description = "Bad Request for empty, null or without mandatory fields"),
+        @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
+    })
     public ResponseEntity<Page<BookEntity>> listPageable(
                                 @RequestParam(defaultValue = "0") int page,
                                 @RequestParam(defaultValue = "10") int size,
                                 @RequestParam(defaultValue = "title,asc") String[] sort,
                                 @RequestParam(required = false) String query){
-
 
         Sort.Direction direction = Sort.Direction.fromString(sort[1]);
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort[0]));
@@ -79,7 +86,15 @@ public class BookController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a book by Id")
+    @Operation(summary = "Get a book by Id.", description = "A GET Mapping to retrieve a book by ID.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully created the book",
+                                            content = @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "400", description = "Bad Request for empty, null or without mandatory fields"),
+        @ApiResponse(responseCode = "404", description = "Not Found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
+    })
     public ResponseEntity<BookEntity> getById(@PathVariable Long id){
 
         Optional<BookEntity> book = bookRepository.findById(id);
@@ -89,14 +104,29 @@ public class BookController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an existing book by Id")
+    @Operation(summary = "Update an existing book by Id.", description = "A PUT Mapping to Update an existing book by ID.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully created the book",
+                                            content = @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "404", description = "Not Found"),
+        @ApiResponse(responseCode = "400", description = "Bad Request for empty, null or without mandatory fields"),
+        @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
+    })
     public ResponseEntity<BookEntity> update(@PathVariable Long id, @Valid @RequestBody BookEntity bookUpdated){
 
         return new ResponseEntity<>(bookService.updateBook(id, bookUpdated), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a book by Id")
+    @Operation(summary = "Delete a book by Id.", description = "A DELETE Mapping to delete a book by Id.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully created the book",
+                                            content = @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "404", description = "Not Found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
+    })
     public ResponseEntity<Void> delete(@PathVariable Long id){
 
         if (bookRepository.existsById(id)){
@@ -109,7 +139,14 @@ public class BookController {
     }
 
     @GetMapping("/{id}/ai-insights")
-    @Operation(summary = "Get an AI summary for a specific book by Id")
+    @Operation(summary = "Get an AI insight for a specific book.", description = "A GET Mapping to generate an AI summary/insight for a specific book by Id.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully created the book",
+                                            content = @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = BookEntity.class))),
+        @ApiResponse(responseCode = "404", description = "Not Found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error for problems with process or application")
+    })
     public ResponseEntity<BookEntity> getBookInsights(@PathVariable Long id){
 
         BookEntity bookEntity = insightService.getBookInsights(id);
@@ -117,5 +154,4 @@ public class BookController {
         bookService.updateBook(id, bookEntity);
         return new ResponseEntity<>(bookEntity, HttpStatus.OK);
     }
-
 }
