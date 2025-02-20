@@ -1,9 +1,13 @@
 package com.bookslibrary.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 public class BookEntity {
@@ -12,10 +16,23 @@ public class BookEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+	@NotNull(message = "The Title field is mandatory")
+	@NotBlank(message = "The Title cannot be blank or empty")
     private String title;
+
+	@NotNull(message = "The Author field is mandatory")
+	@NotBlank(message = "The Author cannot be blank or empty")
     private String author;
-    private String isbn;
-    private int publicationYear;
+
+	@NotNull(message = "The ISBN field is mandatory")
+	@Pattern(regexp = "^[0-9]{13}$", message = "The ISBN should be a 13-digit number (e.g., 9788533302273). ")
+	private String isbn;
+
+	@NotNull(message = "The PublicationYear field is mandatory")
+	@Pattern(regexp = "^[0-9]{4}$", message = "Publication Year should be a 4-digit number (e.g., 1993).")
+    private String publicationYear;
+
+	@Column(length = 2000)
     private String description;
 
 	public Long getId() {
@@ -50,11 +67,11 @@ public class BookEntity {
 		this.isbn = isbn;
 	}
 
-	public int getPublicationYear() {
+	public String getPublicationYear() {
 		return this.publicationYear;
 	}
 
-	public void setPublicationYear(int publicationYear) {
+	public void setPublicationYear(String publicationYear) {
 		this.publicationYear = publicationYear;
 	}
 
