@@ -111,8 +111,6 @@ public class InsightService {
         if(responseBody != null && responseBody.containsKey("choices")){
 
             List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
-
-
             Optional<String> text = choices.stream()
                                             .filter(choice -> choice.containsKey("message"))
                                             .map(choice -> (Map<String, Object>) choice.get("message"))
